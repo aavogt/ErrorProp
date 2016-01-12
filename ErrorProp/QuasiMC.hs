@@ -1,6 +1,10 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE BangPatterns #-}
 -- | Fourier amplitude sensitivity test, a quasi-monte carlo method
+--
+-- does not yet play well with "ErrorProp.MonteCarlo", though a function
+-- like 'ErrorProp.MonteCarlo.sample' should be straightforward to
+-- implement. However, 'fast' provides the core of such a function
 module ErrorProp.QuasiMC where
 
 import Math.Polynomial
