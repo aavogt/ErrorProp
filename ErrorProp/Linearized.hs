@@ -1,6 +1,6 @@
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE Rank2Types #-}
 {- | Error propagation by using "Numeric.AD.Mode.Forward"
 
@@ -34,12 +34,11 @@ This is the same as:
 module ErrorProp.Linearized where
 
 import Data.List
-import Foreign.C
 import Numeric.AD.Mode.Forward
-import Numeric.Compensated
 import qualified Data.Map as M
 import Text.PrettyPrint
 import Text.XFormat.Show
+import ErrorProp.Common
 
 -- | linearized
 data LV a = LV
@@ -63,7 +62,7 @@ data LV a = LV
         lv_var :: ! (M.Map String a) }
     deriving (Show, Eq)
 
-
+newtype TM a = TM (M.Map String (a, TM a))
 
 summary :: LV Double -> Doc
 summary x = hang (double (lv_mean x)) 2
@@ -86,49 +85,23 @@ summary x = hang (double (lv_mean x)) 2
 
 -- * Creating 'LV'
 
--- | also called '±'
-a +/- (s,n) = LV a (M.singleton s 1) (M.singleton s (n*n))
+instance ErrorProp LV where
+    type ErrorPropLabel LV a = (String, a)
+    a +/- (s,n) = LV a (M.singleton s 1) (M.singleton s (n*n))
+    certain a = LV a M.empty M.empty
 
--- | also called '+/-'
-a ± b = a +/- b
-
--- | add an additional uncertainty to a value
-a +- sn = a + (0 ± sn)
-
-
--- | the x in @LV x@ must be in this class. An empty instance can work. For
--- example:
---
--- > instance (Compensable a, Show a) => LVNum (Compensated a)
-class (Eq a, Num a) => LVNum a where
-    -- | used to show the variance, when a source of error is given
-    -- inconsistent values such as:
-    --
-    -- > 1 ± ("x",2) + 2 ± ("x",1)
-    showLVNum :: a -> String
-    default showLVNum :: Show a => a -> String
-    showLVNum = show
-
-instance LVNum Double
-instance LVNum Float
-instance LVNum CDouble
-instance LVNum CFloat
-instance (Compensable a, Show a) => LVNum (Compensated a)
-
-lv :: a -> LV a
-lv a = LV a M.empty M.empty
 
 -- * Lifting normal functions to LV
-llv1 :: LVNum a => (forall s. AD s (Forward a) -> AD s (Forward a)) -> LV a -> LV a
+llv1 :: ShowNum a => (forall s. AD s (Forward a) -> AD s (Forward a)) -> LV a -> LV a
 llv1 f x = llvn (\[a] -> f $! a) [x]
 
-llv2 :: LVNum a => (forall s. AD s (Forward a) -> AD s (Forward a) -> AD s (Forward a)) -> LV a -> LV a -> LV a
+llv2 :: ShowNum a => (forall s. AD s (Forward a) -> AD s (Forward a) -> AD s (Forward a)) -> LV a -> LV a -> LV a
 llv2 f x y = llvn (\[a,b] -> f a b) [x,y]
 
-llvn :: LVNum a => (forall s. [AD s (Forward a)] -> AD s (Forward a)) -> [LV a] -> LV a
+llvn :: ShowNum a => (forall s. [AD s (Forward a)] -> AD s (Forward a)) -> [LV a] -> LV a
 llvn f lvs = case llvnn (\x -> [f x]) lvs of [a] -> a
 
-llvnn :: LVNum a => (forall s. [AD s (Forward a)] -> [AD s (Forward a)]) -> [LV a] -> [LV a]
+llvnn :: ShowNum a => (forall s. [AD s (Forward a)] -> [AD s (Forward a)]) -> [LV a] -> [LV a]
 llvnn f lvs = do
     (fab,dfs) <- jacobian' f (map lv_mean lvs)
     return $ let
@@ -143,34 +116,34 @@ llvnn f lvs = do
                         showf ("llvnn: variance "%String%
                                " duplicated with 2 different values "%
                                String%String)
-                              k (showLVNum v1) (showLVNum v2)
+                              k (showNum v1) (showNum v2)
                 else v1))
             M.empty
             (map lv_var lvs))
      in fab `seq` M.fold seq () m1 `seq` M.fold seq () m2 `seq` LV fab m1 m2
 
-instance LVNum a => Num (LV a) where
+instance ShowNum a => Num (LV a) where
     (+) = llv2 (+)
     (-) = llv2 (-)
     (*) = llv2 (*)
     abs = llv1 abs
     signum = llv1 signum
-    fromInteger = lv . fromInteger
+    fromInteger = certain . fromInteger
 
 instance Ord a => Ord (LV a) where
     compare a b = compare (lv_mean a) (lv_mean b)
-instance (Real a, LVNum a) => Real (LV a) where
+instance (Real a, ShowNum a) => Real (LV a) where
     toRational = toRational . lv_mean
-instance (RealFrac a, LVNum a) => RealFrac (LV a) where
+instance (RealFrac a, ShowNum a) => RealFrac (LV a) where
     properFraction (LV a ss nn) = let (c,d) = properFraction a
         in (c, LV d (fmap (\x -> x*a/d) ss) nn)
-instance (Fractional a, LVNum a) => Fractional (LV a) where
-    fromRational = lv . fromRational
+instance (Fractional a, ShowNum a) => Fractional (LV a) where
+    fromRational = certain . fromRational
     (/) = llv2 (/)
     recip = llv1 recip
 
-instance (Floating a, LVNum a) => Floating (LV a) where
-  pi = lv pi
+instance (Floating a, ShowNum a) => Floating (LV a) where
+  pi = certain pi
   (**) = llv2 (**)
   logBase = llv2 logBase
   exp   = llv1 exp

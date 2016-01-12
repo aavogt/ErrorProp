@@ -9,18 +9,19 @@ maintainer:          Adam Vogt <vogt.adam@gmail.com>
 category:            Math
 build-type:          Simple
 cabal-version:       >=1.10
-tested-with:         GHC == 7.8.2
+tested-with:         GHC == 7.10.2
 
 library
   exposed-modules:     ErrorProp.MonteCarlo,
                        ErrorProp.Linearized,
-                       ErrorProp.QuasiMC
+                       ErrorProp.QuasiMC,
+                       ErrorProp.Common
   other-extensions:    FlexibleContexts,
                        FlexibleInstances,
                        DefaultSignatures,
                        Rank2Types,
                        BangPatterns
-  build-depends:       base >=4.6 && <4.8,
+  build-depends:       base >=4.6 && <4.9,
                        mersenne-random >=1.0 && <1.1,
                        containers >=0.5 && <0.6,
                        vector >=0.10 && <0.11,
@@ -30,6 +31,7 @@ library
                        compensated >=0.6 && <0.7,
                        polynomial >=0.7 && <0.8,
                        primes >=0.2 && <0.3,
-                       vector-space >=0.8 && <0.9,
-                       statistics >=0.11 && <0.12
+                       vector-space >=0.8 && <0.11,
+                       statistics >=0.11 && <0.14,
+                       free
   default-language:    Haskell2010

@@ -12,6 +12,8 @@ import Data.List
 import Data.Numbers.Primes
 import Data.VectorSpace
 
+import ErrorProp.QuasiMC.Cukier (cukierOmegas)
+
 import Statistics.Sample
 
 f1 alpha2 = constPoly 1 ^+^ ((-1)^(1 + alpha2 `mod` 2) * (2*pi)^(2*alpha2)) *^ bx
@@ -93,6 +95,11 @@ with sigma^2 estimated by sum_k=1^q (Q - Qbar)^2 / ( q (q-1))
 
 is unbiased. Quantiles are biased (Lemieux 2008). Bootstrap/jacknife resample to estimate bias.
 
+
+trapezoidal / rectangle rule is good for the periodic integral here,
+but possibly try "GA Evans, JR Webster 1999"
+
+
 -}
 rank1 :: (Integral i, RealFrac a, VG.Vector v a, VG.Vector vi i,
             VG.Vector vi a)
@@ -119,9 +126,10 @@ rank1 z n c f = go 0 0
 fracPart x = x - fromInteger (floor x)
 
 
+-- | fourier amplitude sensitivity test
 fast :: 
   (RealFrac b, VG.Vector V.Vector b) =>
-    V.Vector Int -- ^ N incommensurate frequencies (see 'korbov')
+    V.Vector Int -- ^ N incommensurate frequencies (see 'korbov', 'cukierOmegas', or others)
   -> (V.Vector b -> Double) -- ^ a function of N variables which will be sampled on @[0, 1)^N@
   -> V.Vector Double -- ^ fraction of the total variance attributed to the i'th variable
 fast omegas f =
