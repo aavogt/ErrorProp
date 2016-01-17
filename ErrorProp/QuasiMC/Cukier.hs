@@ -1,4 +1,5 @@
-module ErorrProp.QuasiMC.Cukier where
+module ErrorProp.QuasiMC.Cukier where
+import qualified Data.Vector as V
 -- omega relatively prime to N (Cheng Suzukawa Wolfsberg pg 3994),
 -- NAG D01GYF.1
 --

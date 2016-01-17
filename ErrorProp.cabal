@@ -15,6 +15,7 @@ library
   exposed-modules:     ErrorProp.MonteCarlo,
                        ErrorProp.Linearized,
                        ErrorProp.QuasiMC,
+                       ErrorProp.QuasiMC.Cukier,
                        ErrorProp.Common
   other-extensions:    FlexibleContexts,
                        FlexibleInstances,

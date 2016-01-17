@@ -7,6 +7,7 @@
 -- implement. However, 'fast' provides the core of such a function
 module ErrorProp.QuasiMC where
 
+import qualified Data.Map as M
 import Math.Polynomial
 import Math.Polynomial.Bernoulli
 import qualified Data.Vector.Unboxed as V
@@ -19,6 +20,13 @@ import Data.VectorSpace
 import ErrorProp.QuasiMC.Cukier (cukierOmegas)
 
 import Statistics.Sample
+import Data.Maybe
+
+
+import ErrorProp.MonteCarlo
+import ErrorProp.Common
+
+
 
 f1 alpha2 = constPoly 1 ^+^ ((-1)^(1 + alpha2 `mod` 2) * (2*pi)^(2*alpha2)) *^ bx
   where bx = bernoulliPoly !! (2*alpha2)
@@ -159,7 +167,10 @@ fast omegas f =
                   | j <- [1 .. 2],
                     let fij = fromIntegral j ]
 
-        normalizeFac = 2 / variance fks
+        -- normalizeFac = 2 / variance fks -- XXX the
+        -- correct normalization should be some analytical
+        -- expression... like above, not the value below
+        normalizeFac = recip $ V.sum vjs
 
     in V.map (*normalizeFac) vjs
 
@@ -177,6 +188,28 @@ fastKis np s = [ (k,fastKi s np k)  | k <- [0 .. s-1]]
 
 > ki k V.! j == 1 if k==j else 0
 
-approximately satisfied: normalization is off somewhere however
-
 -}
+
+-- | `pickNP err s` uses 'fastKis' to pick the parameter np, such that the
+-- value that should be 1 is within err of 1, for a problem of dimension s
+pickNP err s = head [ np
+    | np <- [ 2 .. ],
+     all ok (fastKis np s) ]
+  where ok (i, v) = abs (1 - v V.! i) < err
+
+sampleQMC :: Double -- ^ error tolerance (see 'pickNP')
+  -> MV Double
+  -> [(String, Double)] -- variable name, fraction of the total variance
+sampleQMC err mv =
+  let n = wheelSieve 5 !! pickNP err s
+      (_, l) = korbovLExhaustive 1 n s
+      omegas = korbov l n s
+      s = M.size (mv_vars mv)
+
+      f v = mv_sample mv (updateMV v (mv_vars mv))
+  in M.keys (mv_vars mv) `zip` VG.toList (fast omegas f)
+
+updateMV :: (Floating b, V.Unbox b) => V.Vector b -> M.Map String (Maybe b) -> M.Map String b
+updateMV v m = snd $ M.mapAccum (\ n e -> (n+1, fromMaybe 1 e * toUnitVar (v V.! n))) 0 m
+  where 
+        toUnitVar x = sqrt 12 * (x - 0.5)
