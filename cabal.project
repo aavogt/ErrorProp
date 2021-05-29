@@ -1,0 +1,10 @@
+packages: .
+source-repository-package
+    type: git
+    location: https://github.com/aavogt/polynomial
+    tag: 01d582cdc2677e60e91e3fdb60838d131f980fda
+
+source-repository-package
+    type: git
+    location: https://github.com/aavogt/xformat
+    tag: 61fe8b1ee580b289c72c99e91c6978d5c3b3bb10
