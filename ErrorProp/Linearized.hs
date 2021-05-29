@@ -62,8 +62,6 @@ data LV a = LV
         lv_var :: ! (M.Map String a) }
     deriving (Show, Eq)
 
-newtype TM a = TM (M.Map String (a, TM a))
-
 summary :: LV Double -> Doc
 summary x = hang (double (lv_mean x)) 2
             $ hang (text "RSD in %") 2
@@ -105,11 +103,11 @@ llvnn :: ShowNum a => (forall s. [AD s (Forward a)] -> [AD s (Forward a)]) -> [L
 llvnn f lvs = do
     (fab,dfs) <- jacobian' f (map lv_mean lvs)
     return $ let
-       m1 = (foldl' (M.unionWith (+)) M.empty $ zipWith3 (\a dfa -> fmap (\x -> x*dfa ))
+       m1 = foldl' (M.unionWith (+)) M.empty $ zipWith3 (\a dfa -> fmap (*dfa))
                 (map lv_mean lvs)
                 dfs
-                (map lv_sens lvs))
-       m2 = (foldl' (M.unionWithKey
+                (map lv_sens lvs)
+       m2 = foldl' (M.unionWithKey
             (\k v1 v2 ->
                 -- should be an approximate comparison?
                 if v1 /= v2 then error $
@@ -119,8 +117,8 @@ llvnn f lvs = do
                               k (showNum v1) (showNum v2)
                 else v1))
             M.empty
-            (map lv_var lvs))
-     in fab `seq` M.fold seq () m1 `seq` M.fold seq () m2 `seq` LV fab m1 m2
+            (map lv_var lvs)
+     in fab `seq` M.foldr seq () m1 `seq` M.foldr seq () m2 `seq` LV fab m1 m2
 
 instance ShowNum a => Num (LV a) where
     (+) = llv2 (+)
