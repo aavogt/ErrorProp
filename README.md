@@ -10,11 +10,11 @@ Three methods are done.
 
 # Related work
 ## Linearized Error Propagation
-[https://github.com/leftaroundabout/uncertainly-haskell](uncertainty-haskell) also
+[leftroundabout/uncertainty-haskell](https://github.com/leftaroundabout/uncertainly-haskell) also
 does a linearized error propagation. However it does not name individual
 sources of error, they are instead positional arguments.
 
-[https://github.com/mstksg/uncertain](uncertain)
+[mstkg/uncertain](https://github.com/mstksg/uncertain)
 
 ## Monte Carlo
-[http://www.haskell.org/haskellwiki/Probabilistic_Functional_Programming](several packages are described in)
+[several packages are described in](http://www.haskell.org/haskellwiki/Probabilistic_Functional_Programming)
